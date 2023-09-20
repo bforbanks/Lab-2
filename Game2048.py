@@ -10,8 +10,6 @@ import numpy as np
 class Game2048():    
     # Rendering?
     rendering = False
-
-    
     def __init__(self, state=None):
         pygame.init()
         if state is None:
