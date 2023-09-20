@@ -18,9 +18,28 @@ class Game2048():
             board, score = state
             self.board, self.score = board.copy(), score
 
+
+    def set_state(self, state):
+            """Set the state of the game
+            
+            """
+            board, score = state
+            self.board, self.score = board.copy(), score
+
+    def move_is_legal(self, direction):
+        before_board = self.board.copy()
+        before_score = self.score
+        self.board, self.score, board_have_changed= self.move(self.board, self.score, direction)
+        if(self.game_over(self.board) or not board_have_changed):
+            return False
+        self.board = before_board
+        self.score = before_score
+        return True
+
+
             
     def step(self, action):
-        self.board, self.score = self.move(self.board, self.score, action)
+        self.board, self.score, _ = self.move(self.board, self.score, action)
 
         # return observation, reward, done
         done = self.game_over(self.board)        
@@ -139,12 +158,14 @@ class Game2048():
             board = board.T[:,::-1]
             board, score = self.move_left(board, score)
             board = board[:,::-1].T
-    
+
+        board_have_changed = False 
         # Add new 2 or 4 at random pos (if board has changed and there is space)
         if not np.all(board) and np.any(board != initial_board):
-            board[self.random_empty_pos(board)] = [2,4][np.random.randint(2)]       
+            board[self.random_empty_pos(board)] = [2,4][np.random.randint(2)]
+            board_have_changed = True
             
-        return (board, score)
+        return (board, score, board_have_changed)
        
     def new_game(self):
         board = np.zeros((4, 4), dtype=int)
