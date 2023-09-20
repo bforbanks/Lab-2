@@ -20,18 +20,32 @@ class Game2048():
 
 
     def set_state(self, state):
-            """Set the state of the game
-            
+            """
+            Set the state of the game
+
             """
             board, score = state
             self.board, self.score = board.copy(), score
 
     def move_is_legal(self, direction):
+        """
+        Checks if the play will die on this move or not move at all
+
+        Args:
+            direction(string): move direction to check
+
+        Returns:
+            (boolean): true if the move is legal
+        """
         before_board = self.board.copy()
         before_score = self.score
+
+        ## actually just simulate the move and check the state
         self.board, self.score, board_have_changed= self.move(self.board, self.score, direction)
         if(self.game_over(self.board) or not board_have_changed):
             return False
+
+        ## and just reset the state afterward
         self.board = before_board
         self.score = before_score
         return True
