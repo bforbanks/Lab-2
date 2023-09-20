@@ -24,7 +24,7 @@ class SimGame2048:
             board (board): The board to check
 
         Returns:
-            int: number of empty cells
+            int: Number of empty cells
         """
         board_score = 0
         import numpy as np
@@ -38,7 +38,7 @@ class SimGame2048:
         Runs multiple simulations, by using the first move from the constructor.
         
         Returns:
-            float: The score
+            float: The average score of the simulations
         """
         from Game2048 import Game2048
         import numpy as np
@@ -65,10 +65,10 @@ class SimGame2048:
                 (board, score), reward, done = sim.step(action)
                 current_depth += 1
                 # TODO: maybe implement scoring system that gives points
-                #       based on the current state for each step
+                #  based on the current state for each step
 
-            # TODO: check if the game have been won and give a lot of points
             # if game_over
+            # TODO: check if the game have been won and give a lot of points
             if(current_depth < self.max_depth):
                 self.scores.append(0)
                 continue
@@ -112,6 +112,7 @@ def main():
 
         # this will start 4 process, that will calculate the different directions. 
         # a future is a representation of the function call to the process.
+        # TODO: maybe add multiple processes for each direaction
         futures = [process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions]
 
         # wait for all the process-calls to be done
