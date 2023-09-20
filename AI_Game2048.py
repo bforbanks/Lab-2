@@ -59,15 +59,14 @@ while not exit_program:
         sim_results.update({sim.run() : direction})
 
     print(sim_results)
-    #TODO: fix this
-    direction_to_go = sim_results[sorted(sim_results[0])]
+    direction_to_go = sim_results[sorted(sim_results)[-1]]
 
     print(direction_to_go)
 
-    time.sleep(3)
+    #time.sleep(5)
 
 
-    action, action_taken  = random.choice(actions), True
+    action, action_taken  = direction_to_go, True
 
     if action_taken:
         (board, score), reward, done = env.step(action)
