@@ -1,17 +1,19 @@
 
 from concurrent.futures import ProcessPoolExecutor
-from functools import partial
 from concurrent.futures import wait
-from matplotlib import pyplot as plt 
 import numpy as np  
+from functools import reduce
    
 
 class SimGame2048:
     """
     Important settings just below
     """
-    max_depth = 4
-    simulation_count = 200
+    max_depth = 5
+    # This is the simulationcount for each process. If you only have the first line 
+    # active it will be this value simulations pr. direction. 
+    # If you have 2 lines active = 2*simulation_count for each direction
+    simulation_count = 100
 
     scores = []
 
@@ -53,7 +55,7 @@ class SimGame2048:
 
 
         if(not sim.move_is_legal(self.first_step)):
-            return 0
+            return [0]
         
         # loop for running n simulations
         for i in range(self.simulation_count):
@@ -78,11 +80,9 @@ class SimGame2048:
                 self.scores.append(0)
                 continue
 
-            # the scoring function if stil alive
-            board_score = self.calculate_empty_cells(board)
             # self.scores.append(board_score + (1 + score)*10/(1 + self.initial_score))
             if(self.initial_score != 0):
-                self.scores.append(np.floor(score-self.initial_score)*100/self.initial_score)
+                self.scores.append(np.floor(score-self.initial_score))
             else:
                 self.scores.append(score)
 
@@ -93,6 +93,8 @@ class SimGame2048:
 def sim_factory(direction, board, score):
     """
     A function to run in its own process, and be a wrapper around the simulation for one direction.
+                futures.append(process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions)
+
     It will start the simulation, and retun the result to the main thread.
 
     Args:
@@ -101,87 +103,82 @@ def sim_factory(direction, board, score):
     """
     from AI_Game2048 import SimGame2048
     sim = SimGame2048(direction, board, score)
-    return {direction: sim.run()}
+    return {'direction': direction, 'score': sim.run()}
 
 def main():
     """
     The main function. Only to be run on the main thread.
     """
-    env = Game2048()
-    env.reset()
     actions = ['left', 'up', 'down', 'right']
     exit_program = False
-    action_taken = False
-    process_pool = ProcessPoolExecutor(4)
+    process_pool = ProcessPoolExecutor(16)
 
     while not exit_program:
-        env.render()
+        scores = []
+        confidence_interval=0
+        mean=0
+        ## The entire stat loop
+        while confidence_interval>=0.05*mean or len(scores)<30:
 
-        sim_results = {}
-        sim_results_average = {}
+            env = Game2048()
+            env.reset()
 
-
-        # this will start 4 process, that will calculate the different directions. 
-        # a future is a representation of the function call to the process.
-        # TODO: maybe add multiple processes for each direaction
-        futures = [process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions]
-
-        # wait for all the process-calls to be done
-        wait(futures)
-
-
-        ns = []
-        xs = []
-        # extract the results of the simulations from the thread futures
-        for future in futures:
-            result = future.result()
-            sim_results.update(result)
-            sim_results_average.update({np.sum(list(result.values())): list(result.keys())[0]})
-            n,x, _ = plt.hist(result.values(), bins = np.floor(np.power(2,(range(0,10)))), histtype=u'step', color='red')
-            xs.append(x)
-            ns.append(n)
-
-        plt.clf()
-        plt.xscale("log")
-        for i in range(0,3):
-            plt.plot(xs[i][:-1],ns[i])
-            # y,x, _ = plt.hist([sim_results.get("left"), sim_results.get("right"), sim_results.get("up"), sim_results.get("down")], bins = range(0,400, 20), histtype=u'step') 
-        plt.title("histogram") 
-        plt.ion()
-        plt.show(block= False)
-        plt.draw()
-        plt.pause(0.01)
-        
-
-
-
-        direction_to_go = sim_results_average[sorted(sim_results_average)[-1]]
-        action, action_taken  = direction_to_go, True
-
-        if action_taken:
-            (board, score), reward, done = env.step(action)
             action_taken = False
+            done = False
 
-        # Process game events
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                process_pool.shutdown()
-                exit_program = True
-            if event.type == pygame.KEYDOWN:
-                if event.key in [pygame.K_ESCAPE, pygame.K_q]:
-                    exit_program = True
-                if event.key == pygame.K_UP:
-                    action, action_taken = 'up', True
-                if event.key == pygame.K_DOWN:
-                    action, action_taken  = 'down', True
-                if event.key == pygame.K_RIGHT:
-                    action, action_taken  = 'right', True
-                if event.key == pygame.K_LEFT:
-                    action, action_taken  = 'left', True
-                if event.key == pygame.K_r:
-                    env.reset()
-                    for future in futures:
-                        future.cancel()
+            ## One game, loop the steps
+            while not done and not exit_program:
+                env.render()
+
+                # this will start 4 process, that will calculate the different directions. 
+                # a future is a representation of the function call to the process.
+                # this represents. This first line is the first processes for each direction
+                futures = [process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions]
+                # each of these lines adds another process for each direction. So one line adds 4 extra processes:
+                futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions])
+                futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions])
+
+                # wait for all the process-calls to be done
+                wait(futures)
+                results = []
+                total_directions = []
+
+                for future in futures:
+                    results.append(future.result())
+
+                for direction in actions:
+                    direction_result = map(lambda x: x['score'], list(filter(lambda r: r['direction'] == direction, results)))
+                    direction_results = []
+                    for r in direction_result:
+                        direction_results.extend(r)
+                    total_directions.append({'direction': direction, 'score_sum': sum(direction_results)/len(direction_results)})     
+
+                direction_to_go = sorted(total_directions, key=lambda d: d['score_sum'])[-1]['direction']
+                action, action_taken  = direction_to_go, True
+
+                if action_taken:
+                    (board, score), reward, done = env.step(action)
+                    action_taken = False
+
+                # Process game events
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        process_pool.shutdown()
+                        exit_program = True
+                    if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                        env.reset()
+                        for future in futures:
+                            future.cancel()
+
+            # Stat stuff
+            scores.append(score)
+            mean = sum(scores)/len(scores)
+            sd = np.sqrt(sum([(s-mean)**2 for s in scores])/(len(scores)-1))
+            confidence_interval = 1.96*sd/np.sqrt(len(scores))
+            print(score, " > ", confidence_interval)
+        print(f'Mean: {mean}, Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}')
+
+        
 
     env.close()
 
