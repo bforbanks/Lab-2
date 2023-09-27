@@ -9,19 +9,20 @@ class SimGame2048:
     """
     Important settings just below
     """
-    max_depth = 5
+
     # This is the simulationcount for each process. If you only have the first line 
     # active it will be this value simulations pr. direction. 
     # If you have 2 lines active = 2*simulation_count for each direction
-    simulation_count = 100
+    simulation_count = 67
 
     scores = []
 
-    def __init__(self, first_step, current_board, initial_score):
+    def __init__(self, first_step, current_board, initial_score,max_depth):
         self.first_step = first_step
         self.initial_board = current_board
         self.initial_score = initial_score
         self.initial_board_score = self.calculate_empty_cells(current_board)
+        self.max_depth=max_depth
 
     def calculate_empty_cells(self, board):
         """
@@ -55,7 +56,7 @@ class SimGame2048:
 
 
         if(not sim.move_is_legal(self.first_step)):
-            return [0]
+            return [-1]
         
         # loop for running n simulations
         for i in range(self.simulation_count):
@@ -90,7 +91,7 @@ class SimGame2048:
         return self.scores
 
 
-def sim_factory(direction, board, score):
+def sim_factory(direction, board, score, max_depth):
     """
     A function to run in its own process, and be a wrapper around the simulation for one direction.
                 futures.append(process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions)
@@ -102,7 +103,7 @@ def sim_factory(direction, board, score):
         score(int): The initial score of the board for all the simulations
     """
     from AI_Game2048 import SimGame2048
-    sim = SimGame2048(direction, board, score)
+    sim = SimGame2048(direction, board, score, max_depth)
     return {'direction': direction, 'score': sim.run()}
 
 def main():
@@ -114,71 +115,73 @@ def main():
     process_pool = ProcessPoolExecutor(16)
 
     while not exit_program:
-        scores = []
-        confidence_interval=0
-        mean=0
-        ## The entire stat loop
-        while confidence_interval>=0.05*mean or len(scores)<30:
+        for max_depth in range(1,11):
+            scores = []
+            confidence_interval=0
+            mean=0
+            ## The entire stat loop
+            while confidence_interval>=0.05*mean or len(scores)<30:
 
-            env = Game2048()
-            env.reset()
+                env = Game2048()
+                env.reset()
 
-            action_taken = False
-            done = False
+                action_taken = False
+                done = False
 
-            ## One game, loop the steps
-            while not done and not exit_program:
-                env.render()
+                ## One game, loop the steps
+                while not done and not exit_program:
+                    env.render()
 
-                # this will start 4 process, that will calculate the different directions. 
-                # a future is a representation of the function call to the process.
-                # this represents. This first line is the first processes for each direction
-                futures = [process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions]
-                # each of these lines adds another process for each direction. So one line adds 4 extra processes:
-                futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions])
-                futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions])
+                    # this will start 4 process, that will calculate the different directions. 
+                    # a future is a representation of the function call to the process.
+                    # this represents. This first line is the first processes for each direction
+                    futures = [process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score,max_depth=max_depth) for direction in actions]
+                    # # each of these lines adds another process for each direction. So one line adds 4 extra processes:
+                    futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_depth) for direction in actions])
+                    futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score,max_depth=max_depth) for direction in actions])
 
-                # wait for all the process-calls to be done
-                wait(futures)
-                results = []
-                total_directions = []
+                    # wait for all the process-calls to be done
+                    wait(futures)
+                    results = []
+                    total_directions = []
 
-                for future in futures:
-                    results.append(future.result())
+                    for future in futures:
+                        results.append(future.result())
 
-                for direction in actions:
-                    direction_result = map(lambda x: x['score'], list(filter(lambda r: r['direction'] == direction, results)))
-                    direction_results = []
-                    for r in direction_result:
-                        direction_results.extend(r)
-                    total_directions.append({'direction': direction, 'score_sum': sum(direction_results)/len(direction_results)})     
+                    for direction in actions:
+                        direction_result = map(lambda x: x['score'], list(filter(lambda r: r['direction'] == direction, results)))
+                        direction_results = []
+                        for r in direction_result:
+                            direction_results.extend(r)
+                        total_directions.append({'direction': direction, 'score_sum': sum(direction_results)/len(direction_results)})     
 
-                direction_to_go = sorted(total_directions, key=lambda d: d['score_sum'])[-1]['direction']
-                action, action_taken  = direction_to_go, True
+                    direction_to_go = sorted(total_directions, key=lambda d: d['score_sum'])[-1]['direction']
+                    action, action_taken  = direction_to_go, True
 
-                if action_taken:
-                    (board, score), reward, done = env.step(action)
-                    action_taken = False
+                    if action_taken:
+                        (board, score), reward, done = env.step(action)
+                        action_taken = False
 
-                # Process game events
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        process_pool.shutdown()
-                        exit_program = True
-                    if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-                        env.reset()
-                        for future in futures:
-                            future.cancel()
+                    # Process game events
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            process_pool.shutdown()
+                            exit_program = True
+                        if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                            env.reset()
+                            for future in futures:
+                                future.cancel()
 
-            # Stat stuff
-            scores.append(score)
-            mean = sum(scores)/len(scores)
-            sd = np.sqrt(sum([(s-mean)**2 for s in scores])/(len(scores)-1))
-            confidence_interval = 1.96*sd/np.sqrt(len(scores))
-            print(score, " > ", confidence_interval)
-        print(f'Mean: {mean}, Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}')
-
-        
+                # Stat stuff
+                scores.append(score)
+                mean = sum(scores)/len(scores)
+                sd = np.sqrt(sum([(s-mean)**2 for s in scores])/(len(scores)-1))
+                confidence_interval = 1.96*sd/np.sqrt(len(scores))
+                print(score, " > ", confidence_interval)
+            print(f'Mean: {mean}, Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}')
+            with open(r"C:\Users\Lucas\Desktop\DTU\Git\results simcount=201.txt","a") as f:
+                f.write((f'Mean: {mean}; Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}; Raw: {scores}'))
+       
 
     env.close()
 
