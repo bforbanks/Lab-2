@@ -112,11 +112,13 @@ def main():
 
     while not exit_program:
         for max_depth in range(1,11):
+            if exit_program:
+                break
             scores = []
             confidence_interval=0
             mean=0
             ## The entire stat loop
-            while confidence_interval>=0.05*mean or len(scores)<30:
+            while (confidence_interval>=0.05*mean or len(scores)<30) and not exit_program:
 
                 env = Game2048()
                 env.reset()
@@ -126,15 +128,15 @@ def main():
 
                 ## One game, loop the steps
                 while not done and not exit_program:
-                    env.render()
+                    # env.render()
 
                     # this will start 4 process, that will calculate the different directions. 
                     # a future is a representation of the function call to the process.
                     # this represents. This first line is the first processes for each direction
-                    futures = [process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions]
+                    futures = [process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_depth) for direction in actions]
                     # each of these lines adds another process for each direction. So one line adds 4 extra processes:
-                    futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions])
-                    futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions])
+                    futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_depth) for direction in actions])
+                    futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_depth) for direction in actions])
 
                     # wait for all the process-calls to be done
                     wait(futures)
@@ -163,6 +165,7 @@ def main():
                         if event.type == pygame.QUIT:
                             process_pool.shutdown()
                             exit_program = True
+                            break
                         if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
                             env.reset()
                             for future in futures:
@@ -176,7 +179,7 @@ def main():
                 print(score, " ; ", confidence_interval, "/", 0.05*mean)
             print(f'Mean: {mean}, Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}')
             with open(r"C:\Users\Lucas\Desktop\DTU\Git\results simcount=201.txt","a") as f:
-                f.write((f'Mean: {mean}; Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}; Raw: {scores}'))
+                f.write((f'maxDepth: {max_depth}; Mean: {mean}; Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}; Raw: {scores}\n\n'))
        
 
     env.close()
