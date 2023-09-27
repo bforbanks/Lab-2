@@ -55,7 +55,7 @@ class SimGame2048:
 
 
         if(not sim.move_is_legal(self.first_step)):
-            return [0]
+            return [-1]
         
         # loop for running n simulations
         for i in range(self.simulation_count):
