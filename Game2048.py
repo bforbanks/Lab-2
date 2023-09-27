@@ -42,7 +42,7 @@ class Game2048():
 
         ## actually just simulate the move and check the state
         self.board, self.score, board_have_changed= self.move(self.board, self.score, direction)
-        if(self.game_over(self.board) or not board_have_changed):
+        if(not board_have_changed):
             return False
 
         ## and just reset the state afterward

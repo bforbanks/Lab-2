@@ -9,11 +9,11 @@ class SimGame2048:
     """
     Important settings just below
     """
-    max_depth = 5
+    max_depth = 4
     # This is the simulationcount for each process. If you only have the first line 
     # active it will be this value simulations pr. direction. 
     # If you have 2 lines active = 2*simulation_count for each direction
-    simulation_count = 100
+    simulation_count = 50
 
     scores = []
 
@@ -80,11 +80,7 @@ class SimGame2048:
                 self.scores.append(0)
                 continue
 
-            # self.scores.append(board_score + (1 + score)*10/(1 + self.initial_score))
-            if(self.initial_score != 0):
-                self.scores.append(np.floor(score-self.initial_score))
-            else:
-                self.scores.append(score)
+            self.scores.append(score)
 
 
         return self.scores
@@ -136,7 +132,7 @@ def main():
                 futures = [process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions]
                 # each of these lines adds another process for each direction. So one line adds 4 extra processes:
                 futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions])
-                futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions])
+                # futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions])
 
                 # wait for all the process-calls to be done
                 wait(futures)
@@ -175,7 +171,7 @@ def main():
             mean = sum(scores)/len(scores)
             sd = np.sqrt(sum([(s-mean)**2 for s in scores])/(len(scores)-1))
             confidence_interval = 1.96*sd/np.sqrt(len(scores))
-            print(score, " > ", confidence_interval)
+            print(score, " ; ", confidence_interval, "/", 0.05*mean)
         print(f'Mean: {mean}, Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}')
 
         
