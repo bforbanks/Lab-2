@@ -81,11 +81,7 @@ class SimGame2048:
                 self.scores.append(0)
                 continue
 
-            # self.scores.append(board_score + (1 + score)*10/(1 + self.initial_score))
-            if(self.initial_score != 0):
-                self.scores.append(np.floor(score-self.initial_score))
-            else:
-                self.scores.append(score)
+            self.scores.append(score)
 
 
         return self.scores
@@ -135,10 +131,10 @@ def main():
                     # this will start 4 process, that will calculate the different directions. 
                     # a future is a representation of the function call to the process.
                     # this represents. This first line is the first processes for each direction
-                    futures = [process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score,max_depth=max_depth) for direction in actions]
-                    # # each of these lines adds another process for each direction. So one line adds 4 extra processes:
-                    futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_depth) for direction in actions])
-                    futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score,max_depth=max_depth) for direction in actions])
+                    futures = [process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions]
+                    # each of these lines adds another process for each direction. So one line adds 4 extra processes:
+                    futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions])
+                    futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions])
 
                     # wait for all the process-calls to be done
                     wait(futures)
@@ -177,7 +173,7 @@ def main():
                 mean = sum(scores)/len(scores)
                 sd = np.sqrt(sum([(s-mean)**2 for s in scores])/(len(scores)-1))
                 confidence_interval = 1.96*sd/np.sqrt(len(scores))
-                print(score, " > ", confidence_interval)
+                print(score, " ; ", confidence_interval, "/", 0.05*mean)
             print(f'Mean: {mean}, Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}')
             with open(r"C:\Users\Lucas\Desktop\DTU\Git\results simcount=201.txt","a") as f:
                 f.write((f'Mean: {mean}; Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}; Raw: {scores}'))
