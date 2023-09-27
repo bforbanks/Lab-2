@@ -1,10 +1,6 @@
-
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures import wait
 import numpy as np  
-from functools import reduce
-   
-
 class SimGame2048:
     """
     Important settings just below
@@ -13,7 +9,7 @@ class SimGame2048:
     # This is the simulationcount for each process. If you only have the first line 
     # active it will be this value simulations pr. direction. 
     # If you have 2 lines active = 2*simulation_count for each direction
-    simulation_count = 67
+    simulation_count = 25
 
     scores = []
 
@@ -116,7 +112,7 @@ def main():
             confidence_interval=0
             mean=0
             ## The entire stat loop
-            while confidence_interval>=0.05*mean or len(scores)<30:
+            while confidence_interval>=0.5*mean or len(scores)<5:
 
                 env = Game2048()
                 env.reset()
@@ -126,23 +122,26 @@ def main():
 
                 ## One game, loop the steps
                 while not done and not exit_program:
-                    env.render()
+                    # env.render()
 
                     # this will start 4 process, that will calculate the different directions. 
                     # a future is a representation of the function call to the process.
                     # this represents. This first line is the first processes for each direction
-                    futures = [process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions]
+                    futures = [process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_depth) for direction in actions]
                     # each of these lines adds another process for each direction. So one line adds 4 extra processes:
-                    futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions])
-                    futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions])
+                    futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_depth) for direction in actions])
+                    # futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_depth) for direction in actions])
 
-                    # wait for all the process-calls to be done
+                    # # wait for all the process-calls to be done
                     wait(futures)
                     results = []
                     total_directions = []
 
                     for future in futures:
                         results.append(future.result())
+
+                    # for direction in actions:
+                    #     results.append(sim_factory(direction=direction, board=env.board, score=env.score, max_depth=max_depth))
 
                     for direction in actions:
                         direction_result = map(lambda x: x['score'], list(filter(lambda r: r['direction'] == direction, results)))
@@ -173,10 +172,10 @@ def main():
                 mean = sum(scores)/len(scores)
                 sd = np.sqrt(sum([(s-mean)**2 for s in scores])/(len(scores)-1))
                 confidence_interval = 1.96*sd/np.sqrt(len(scores))
-                print(score, " ; ", confidence_interval, "/", 0.05*mean)
+                print(score, " ; ", confidence_interval, "/", 0.5*mean)
             print(f'Mean: {mean}, Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}')
-            with open(r"C:\Users\Lucas\Desktop\DTU\Git\results simcount=201.txt","a") as f:
-                f.write((f'Mean: {mean}; Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}; Raw: {scores}'))
+            with open(r"C:/Users\Benja/Desktop/test.txt","a") as f:
+                f.write((f'Max Depth: {max_depth}; Mean: {mean}; Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}; Raw: {scores}\n'))
        
 
     env.close()
