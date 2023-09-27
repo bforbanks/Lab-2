@@ -113,7 +113,7 @@ def main():
         confidence_interval=0
         mean=0
         ## The entire stat loop
-        while (confidence_interval>=0.05*mean or len(scores)<5) and not exit_program:
+        while (confidence_interval>=0.05*mean or len(scores)<30) and not exit_program:
 
             env = Game2048()
             env.reset()
