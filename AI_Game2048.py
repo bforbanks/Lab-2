@@ -2,13 +2,16 @@
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from concurrent.futures import wait
+from matplotlib import pyplot as plt 
+import numpy as np  
+   
 
 class SimGame2048:
     """
     Important settings just below
     """
-    max_depth = 5
-    simulation_count = 100
+    max_depth = 4
+    simulation_count = 200
 
     scores = []
 
@@ -46,6 +49,8 @@ class SimGame2048:
 
         actions = ['left', 'up', 'down', 'right']
         sim = Game2048((self.initial_board, self.initial_score))
+        self.scores=[]
+
 
         if(not sim.move_is_legal(self.first_step)):
             return 0
@@ -75,9 +80,14 @@ class SimGame2048:
 
             # the scoring function if stil alive
             board_score = self.calculate_empty_cells(board)
-            self.scores.append(board_score + (1 + score)*10/(1 + self.initial_score))
+            # self.scores.append(board_score + (1 + score)*10/(1 + self.initial_score))
+            if(self.initial_score != 0):
+                self.scores.append(np.floor(score-self.initial_score)*100/self.initial_score)
+            else:
+                self.scores.append(score)
 
-        return sum(self.scores)/len(self.scores)
+
+        return self.scores
 
 
 def sim_factory(direction, board, score):
@@ -91,7 +101,7 @@ def sim_factory(direction, board, score):
     """
     from AI_Game2048 import SimGame2048
     sim = SimGame2048(direction, board, score)
-    return {sim.run() : direction}
+    return {direction: sim.run()}
 
 def main():
     """
@@ -108,6 +118,7 @@ def main():
         env.render()
 
         sim_results = {}
+        sim_results_average = {}
 
 
         # this will start 4 process, that will calculate the different directions. 
@@ -118,12 +129,33 @@ def main():
         # wait for all the process-calls to be done
         wait(futures)
 
+
+        ns = []
+        xs = []
         # extract the results of the simulations from the thread futures
         for future in futures:
-            sim_results.update(future.result())
-        print(sim_results)
+            result = future.result()
+            sim_results.update(result)
+            sim_results_average.update({np.sum(list(result.values())): list(result.keys())[0]})
+            n,x, _ = plt.hist(result.values(), bins = np.floor(np.power(2,(range(0,10)))), histtype=u'step', color='red')
+            xs.append(x)
+            ns.append(n)
 
-        direction_to_go = sim_results[sorted(sim_results)[-1]]
+        plt.clf()
+        plt.xscale("log")
+        for i in range(0,3):
+            plt.plot(xs[i][:-1],ns[i])
+            # y,x, _ = plt.hist([sim_results.get("left"), sim_results.get("right"), sim_results.get("up"), sim_results.get("down")], bins = range(0,400, 20), histtype=u'step') 
+        plt.title("histogram") 
+        plt.ion()
+        plt.show(block= False)
+        plt.draw()
+        plt.pause(0.01)
+        
+
+
+
+        direction_to_go = sim_results_average[sorted(sim_results_average)[-1]]
         action, action_taken  = direction_to_go, True
 
         if action_taken:
