@@ -17,7 +17,6 @@ class SimGame2048ForOneDirection:
         self.first_step = first_step
         self.initial_board = current_board
         self.initial_score = initial_score
-        self.initial_board_score = self.calculate_empty_cells(current_board)
         self.max_depth=max_depth
 
     def run(self):
@@ -100,7 +99,7 @@ def main():
         confidence_interval=0
         mean=0
 
-        # loops over a 
+        # loops over a
         while (confidence_interval>=0.05*mean or len(scores)<30) and not exit_program:
 
             env = Game2048()
@@ -128,9 +127,6 @@ def main():
 
                 for future in futures:
                     results.append(future.result())
-
-                # for direction in actions:
-                #     results.append(sim_factory(direction=direction, board=env.board, score=env.score, max_depth=max_depth))
 
                 for direction in actions:
                     direction_result = map(lambda x: x['score'], list(filter(lambda r: r['direction'] == direction, results)))
