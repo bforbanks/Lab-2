@@ -1,17 +1,17 @@
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures import wait
 import numpy as np  
-class SimGame2048:
+class SimGame2048ForOneDirection:
     """
+    This is a class for the one of the directions. All the variable will be set in the constructor,
+    And then the run method, will run the actuall simulations
     Important settings just below
     """
 
     # This is the simulationcount for each process. If you only have the first line 
     # active it will be this value simulations pr. direction. 
     # If you have 2 lines active = 2*simulation_count for each direction
-    simulation_count = 25
-
-    scores = []
+    simulation_count = 200
 
     def __init__(self, first_step, current_board, initial_score,max_depth):
         self.first_step = first_step
@@ -19,21 +19,6 @@ class SimGame2048:
         self.initial_score = initial_score
         self.initial_board_score = self.calculate_empty_cells(current_board)
         self.max_depth=max_depth
-
-    def calculate_empty_cells(self, board):
-        """
-        Args: 
-            board (board): The board to check
-
-        Returns:
-            int: Number of empty cells
-        """
-        board_score = 0
-        import numpy as np
-        for tile in np.concatenate(board):
-            if tile == 0:
-                board_score = board_score + 1
-        return board_score
 
     def run(self):
         """
@@ -48,7 +33,7 @@ class SimGame2048:
 
         actions = ['left', 'up', 'down', 'right']
         sim = Game2048((self.initial_board, self.initial_score))
-        self.scores=[]
+        scores=[]
 
 
         if(not sim.move_is_legal(self.first_step)):
@@ -77,10 +62,10 @@ class SimGame2048:
                 self.scores.append(0)
                 continue
 
-            self.scores.append(score)
+            scores.append(score)
 
 
-        return self.scores
+        return scores
 
 
 def sim_factory(direction, board, score, max_depth):
@@ -94,8 +79,8 @@ def sim_factory(direction, board, score, max_depth):
         board(board): The initial board-state for all the simulations
         score(int): The initial score of the board for all the simulations
     """
-    from AI_Game2048 import SimGame2048
-    sim = SimGame2048(direction, board, score, max_depth)
+    from AI_Game2048 import SimGame2048ForOneDirection
+    sim = SimGame2048ForOneDirection(direction, board, score, max_depth)
     return {'direction': direction, 'score': sim.run()}
 
 def main():
@@ -109,10 +94,13 @@ def main():
     for max_depth in range(1,11):
         if exit_program:
             break
+
+        # initalization of the stastistical feedback system
         scores = []
         confidence_interval=0
         mean=0
-        ## The entire stat loop
+
+        # loops over a 
         while (confidence_interval>=0.05*mean or len(scores)<30) and not exit_program:
 
             env = Game2048()
