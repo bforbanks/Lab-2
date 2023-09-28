@@ -12,13 +12,13 @@ This was made for a project for a course a DTU September 2023. The following is 
 
 The code is well documented,
 
-## Requirements
+## Getting started
 
 You need to have [Python3](https://www.python.org/downloads/) installed.
 
 When installed, run the following to install the required python packages:
 
-```console
+```
 pip install pygame, numpy
 ```
 
@@ -41,7 +41,13 @@ python Play_Game2048.py
 [AI_Game2048.py](AI_Game2048.py) is our 2MCS. You can change the following parameters:
 
 -   Set the simulation_count(SC): [`line 14`](AI_Game2048.py?plain=1#L14)
--   Set the max_simulation_depth - MSD (read below): [`line 94`](AI_Game2048.py?plain=1#L94)
--   Disable or enable rendering of the game: [`line 116`](AI_Game2048.py?plain=1#L116)
+-   Set the max_simulation_depth - MSD (read below): [`line 95`](AI_Game2048.py?plain=1#L95)
+-   Disable or enable rendering of the game: [`line 117`](AI_Game2048.py?plain=1#L117)
 
 As standard the script will simulate a specific max_simulation_depth(MSD) until the confidence interval of the mean score is 95%. After that i will take the next max_simulation_depth.
+
+## Our results
+
+This is a graph of our results with a 95% confidence interval:
+
+![Result image](results/results.png)
