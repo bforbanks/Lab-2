@@ -9,11 +9,15 @@ class SimGame2048:
     # This is the simulationcount for each process. If you only have the first line 
     # active it will be this value simulations pr. direction. 
     # If you have 2 lines active = 2*simulation_count for each direction
-    simulation_count = 25
+    start_simulation_count = 133
+    current_simulation_count = start_simulation_count
 
     scores = []
 
-    def __init__(self, first_step, current_board, initial_score,max_depth):
+    def __init__(self, first_step, current_board, initial_score,max_depth, one_extra):
+        if(one_extra):
+            self.current_simulation_count = self.current_simulation_count + 1
+        self.one_extra = one_extra
         self.first_step = first_step
         self.initial_board = current_board
         self.initial_score = initial_score
@@ -55,7 +59,7 @@ class SimGame2048:
             return [-1]
         
         # loop for running n simulations
-        for i in range(self.simulation_count):
+        for i in range(self.current_simulation_count):
 
             sim.set_state((self.initial_board, self.initial_score))
             (board, score), reward, done = sim.step(self.first_step)
@@ -83,7 +87,7 @@ class SimGame2048:
         return self.scores
 
 
-def sim_factory(direction, board, score, max_depth):
+def sim_factory(direction, board, score, max_depth, one_extra=False):
     """
     A function to run in its own process, and be a wrapper around the simulation for one direction.
                 futures.append(process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score) for direction in actions)
@@ -95,7 +99,7 @@ def sim_factory(direction, board, score, max_depth):
         score(int): The initial score of the board for all the simulations
     """
     from AI_Game2048 import SimGame2048
-    sim = SimGame2048(direction, board, score, max_depth)
+    sim = SimGame2048(direction, board, score, max_depth, one_extra)
     return {'direction': direction, 'score': sim.run()}
 
 def main():
@@ -104,9 +108,9 @@ def main():
     """
     actions = ['left', 'up', 'down', 'right']
     exit_program = False
-    process_pool = ProcessPoolExecutor(8)
+    process_pool = ProcessPoolExecutor(12)
 
-    for max_depth in range(1,11):
+    for max_depth in range(8,9):
         if exit_program:
             break
         scores = []
@@ -131,7 +135,7 @@ def main():
                 futures = [process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_depth) for direction in actions]
                 # each of these lines adds another process for each direction. So one line adds 4 extra processes:
                 futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_depth) for direction in actions])
-                # futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_depth) for direction in actions])
+                futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_depth, one_extra=True) for direction in actions])
 
                 # # wait for all the process-calls to be done
                 wait(futures)
@@ -176,9 +180,9 @@ def main():
             confidence_interval = 1.96*sd/np.sqrt(len(scores))
             print(score, " ; ", confidence_interval, "/", 0.05*mean)
         print(f'Max Depth: {max_depth}; Mean: {mean}, Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}')
-        with open(r"./results simcount=400","a") as f:
+        with open(r"./results simcount=400.txt","a") as f:
             f.write((f'Max Depth: {max_depth}; Mean: {mean}; Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}; Raw: {scores}\n'))
-       
+        
     env.close()
     exit()
 
