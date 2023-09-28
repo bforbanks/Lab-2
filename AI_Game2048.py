@@ -176,7 +176,7 @@ def main():
             confidence_interval = 1.96*sd/np.sqrt(len(scores))
             print(score, " ; ", confidence_interval, "/", 0.05*mean)
         print(f'Max Depth: {max_depth}; Mean: {mean}, Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}')
-        with open(r"./results simcount=400","a") as f:
+        with open(r"./results simcount=400.txt","a") as f:
             f.write((f'Max Depth: {max_depth}; Mean: {mean}; Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}; Raw: {scores}\n'))
        
     env.close()
