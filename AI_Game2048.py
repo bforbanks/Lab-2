@@ -11,7 +11,8 @@ class SimGame2048ForOneDirection:
     # This is the simulationcount for each process. If you only have the first line 
     # active it will be this value simulations pr. direction. 
     # If you have 2 lines active = 2*simulation_count for each direction
-    simulation_count = 10
+    simulation_count = 200
+    scores=[]
 
     def __init__(self, first_step, current_board, initial_score,max_depth):
         self.first_step = first_step
@@ -32,7 +33,7 @@ class SimGame2048ForOneDirection:
 
         actions = ['left', 'up', 'down', 'right']
         sim = Game2048((self.initial_board, self.initial_score))
-        scores=[]
+        self.scores=[]
 
 
         if(not sim.move_is_legal(self.first_step)):
@@ -60,10 +61,10 @@ class SimGame2048ForOneDirection:
                 self.scores.append(0)
                 continue
 
-            scores.append(score)
+            self.scores.append(score)
 
 
-        return scores
+        return self.scores
 
 
 def sim_factory(direction, board, score, max_depth):
@@ -91,7 +92,7 @@ def main():
 
     # here you can change MSD. It is a range so it will start with the first MSD, and will continue to 
     # loop over that one MSD until the confidence interval 95%
-    for max_simulation_depth in range(1,11):
+    for max_simulation_depth in range(4,11):
         if exit_program:
             break
 
@@ -121,7 +122,7 @@ def main():
                 futures = [process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_simulation_depth) for direction in actions]
 
                 # each of these lines adds another process for each direction. So one line adds 4 extra processes:
-                # futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_simulation_depth) for direction in actions])
+                futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_simulation_depth) for direction in actions])
                 # futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_depth) for direction in actions])
 
                 # wait for all the process-calls to be done
