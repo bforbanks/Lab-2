@@ -11,7 +11,7 @@ class SimGame2048ForOneDirection:
     # This is the simulationcount for each process. If you only have the first line 
     # active it will be this value simulations pr. direction. 
     # If you have 2 lines active = 2*simulation_count for each direction
-    simulation_count = 200
+    simulation_count = 10
 
     def __init__(self, first_step, current_board, initial_score,max_depth):
         self.first_step = first_step
@@ -56,7 +56,6 @@ class SimGame2048ForOneDirection:
                 #  based on the current state for each step
 
             # if game_over
-            # TODO: check if the game have been won and give a lot of points
             if(current_depth < self.max_depth):
                 self.scores.append(0)
                 continue
@@ -88,9 +87,11 @@ def main():
     """
     actions = ['left', 'up', 'down', 'right']
     exit_program = False
-    process_pool = ProcessPoolExecutor(8)
+    process_pool = ProcessPoolExecutor(16)
 
-    for max_depth in range(1,11):
+    # here you can change MSD. It is a range so it will start with the first MSD, and will continue to 
+    # loop over that one MSD until the confidence interval 95%
+    for max_simulation_depth in range(1,11):
         if exit_program:
             break
 
@@ -99,7 +100,7 @@ def main():
         confidence_interval=0
         mean=0
 
-        # loops over a
+        # loop the games for a specific max_simulation_depth
         while (confidence_interval>=0.05*mean or len(scores)<30) and not exit_program:
 
             env = Game2048()
@@ -108,19 +109,22 @@ def main():
             action_taken = False
             done = False
 
-            ## One game, loop the steps
+            # loop the steps of a game
             while not done and not exit_program:
-                # env.render()
+
+                # comment out this line, if you want to stop the rendering
+                env.render()
 
                 # this will start 4 process, that will calculate the different directions. 
                 # a future is a representation of the function call to the process.
                 # this represents. This first line is the first processes for each direction
-                futures = [process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_depth) for direction in actions]
+                futures = [process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_simulation_depth) for direction in actions]
+
                 # each of these lines adds another process for each direction. So one line adds 4 extra processes:
-                futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_depth) for direction in actions])
+                # futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_simulation_depth) for direction in actions])
                 # futures.extend([process_pool.submit(sim_factory, direction=direction, board=env.board, score=env.score, max_depth=max_depth) for direction in actions])
 
-                # # wait for all the process-calls to be done
+                # wait for all the process-calls to be done
                 wait(futures)
                 results = []
                 total_directions = []
@@ -142,7 +146,7 @@ def main():
                     (board, score), reward, done = env.step(action)
                     action_taken = False
 
-                # Process game events
+                # process game events
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         process_pool.shutdown()
@@ -153,15 +157,17 @@ def main():
                         for future in futures:
                             future.cancel()
 
-            # Stat stuff
+            # after each game use the stastistical feedback system to calculate the confidence_interval
             scores.append(score)
             mean = sum(scores)/len(scores)
             sd = np.sqrt(sum([(s-mean)**2 for s in scores])/(len(scores)-1))
             confidence_interval = 1.96*sd/np.sqrt(len(scores))
+
             print(score, " ; ", confidence_interval, "/", 0.05*mean)
-        print(f'Max Depth: {max_depth}; Mean: {mean}, Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}')
+
+        print(f'Max Depth: {max_simulation_depth}; Mean: {mean}, Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}')
         with open(r"./results simcount=400","a") as f:
-            f.write((f'Max Depth: {max_depth}; Mean: {mean}; Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}; Raw: {scores}\n'))
+            f.write((f'Max Depth: {max_simulation_depth}; Mean: {mean}; Confidence Interval: {mean - confidence_interval} - {confidence_interval + mean}; Raw: {scores}\n'))
        
     env.close()
     exit()
