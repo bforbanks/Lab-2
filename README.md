@@ -1,4 +1,4 @@
-# 2048 Monto Carlo Solver
+# 2048 Monte Carlo Solver
 
 _By Asger Thousig Sehested(s234811), Benjamin Banks(s234802) og Lucas R.G. Pedersen(s234842)_
 
